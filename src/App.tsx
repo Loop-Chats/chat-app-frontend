@@ -1,14 +1,44 @@
+import { Navigate, Route, Routes } from "react-router-dom"
+
+import Home from "./pages/Home"
+import Login from "./pages/Login"
+import Profile from "./pages/Profile"
+import Register from "./pages/Register"
+import Settings from "./pages/Settings"
+import Navbar from "./components/Navbar"
+import { useAuthStore } from "./store/useAuthStore"
+import { useEffect } from "react"
+import { Loader } from "lucide-react"
+import { Toaster } from "react-hot-toast"
+
 const App = () => {
+  const {authUser, checkAuth, isCheckingAuth} = useAuthStore()
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  console.log('Authenticated User:', authUser)
+
+  if (isCheckingAuth && !authUser) return (
+    <div className="flex items-center justify-center h-screen">
+      <Loader className="size-10 animate-spin" />
+    </div>
+  )
+
   return (
-    <div className='text-red-500'>
-      <button className="btn btn-neutral">Neutral</button>
-      <button className="btn btn-primary">Primary</button>
-      <button className="btn btn-secondary">Secondary</button>
-      <button className="btn btn-accent">Accent</button>
-      <button className="btn btn-info">Info</button>
-      <button className="btn btn-success">Success</button>
-      <button className="btn btn-warning">Warning</button>
-      <button className="btn btn-error">Error</button>
+    <div>
+      <Navbar />
+
+      <Routes>
+        <Route path="/" element={ authUser ? <Home /> : <Navigate to="/login" /> } />
+        <Route path="/register" element={ !authUser ? <Register /> : <Navigate to="/" /> } />
+        <Route path="/login" element={ !authUser ? <Login /> : <Navigate to="/" /> } />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={ authUser ? <Profile /> : <Navigate to="/login" /> } />
+      </Routes>
+
+      <Toaster />
     </div>
   )
 }
