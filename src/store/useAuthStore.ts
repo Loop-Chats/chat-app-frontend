@@ -17,6 +17,9 @@ interface AuthState {
   isUpdatingProfile: boolean;
   isCheckingAuth: boolean;
   checkAuth: () => Promise<void>;
+  register: (data: { username: string; email: string; password: string }) => Promise<void>;
+  login: (data: { email: string; password: string }) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -47,7 +50,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ authUser: response.data });
       toast.success('Account created successfully!');
     } catch (error) {
-      console.error('Registration error:', error);
       if (isAxiosError(error)) {
             const message = error.response?.data?.message || 'Registration failed. Please try again.';
             toast.error(message);
@@ -58,4 +60,40 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ isRegistering: false });
     }
   },
+
+  login: async (data: { email: string; password: string }) => {
+    set({ isLoggingIn: true });
+    try {
+      const response = await axiosInstance.post('/auth/login', data);
+
+      set({ authUser: response.data });
+      toast.success('Logged in successfully!');
+    } catch (error) {
+      if (isAxiosError(error)) {
+            const message = error.response?.data?.message || 'Login failed. Please try again.';
+            toast.error(message);
+        } else {
+            toast.error('An unexpected error occurred.');
+        }
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
+  logout: async () => {
+    try {
+      await axiosInstance.post('/auth/logout');
+      set({ authUser: null });
+      toast.success('Logged out successfully!');
+    } catch (error) {
+       if (isAxiosError(error)) {
+            const message = error.response?.data?.message || 'Failed to log out. Please try again.';
+            toast.error(message);
+        } else {
+            toast.error('An unexpected error occurred.');
+        }
+    }
+  },
+
+  updateProfile: async () => {}
 }));
