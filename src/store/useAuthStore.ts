@@ -4,10 +4,16 @@ import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
 
 interface User {
-  id: string;
+  _id: string;
   email: string;
   username: string;
-  profilePic?: string;
+  createdAt: string;
+  avatar?: string;
+}
+
+interface UpdateProfileData {
+  username?: string;
+  avatar?: string;
 }
 
 interface AuthState {
@@ -16,10 +22,12 @@ interface AuthState {
   isLoggingIn: boolean;
   isUpdatingProfile: boolean;
   isCheckingAuth: boolean;
+  onlineUsers: string[];
   checkAuth: () => Promise<void>;
   register: (data: { username: string; email: string; password: string }) => Promise<void>;
   login: (data: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: UpdateProfileData) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -28,6 +36,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoggingIn: false,
   isUpdatingProfile: false,
   isCheckingAuth: true,
+  onlineUsers: [],
 
   checkAuth: async () => {
     try {
@@ -95,5 +104,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  updateProfile: async () => {}
+  updateProfile: async (data: UpdateProfileData) => {
+    set({ isUpdatingProfile: true });
+
+    try {
+      const response = await axiosInstance.patch('/auth/update-profile', data);
+      set({ authUser: response.data });
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      if (isAxiosError(error)) {
+            const message = error.response?.data?.message || 'Failed to update profile. Please try again.';
+            toast.error(message);
+        } else {
+            toast.error('An unexpected error occurred.');
+        }
+    } finally {
+      set({ isUpdatingProfile: false });
+    }
+  }
 }));

@@ -52,10 +52,10 @@ const Navbar = () => {
               className="btn btn-ghost btn-sm sm:btn-md gap-2 font-mono uppercase tracking-wide text-xs"
               title="Profile"
             >
-              {authUser.profilePic ? (
+              {authUser.avatar ? (
                 <div className="avatar">
                   <div className="w-5 h-5 rounded-full ring-1 ring-primary ring-offset-base-100 ring-offset-1">
-                    <img src={authUser.profilePic} alt="Avatar" />
+                    <img src={authUser.avatar} alt="Avatar" />
                   </div>
                 </div>
               ) : (
