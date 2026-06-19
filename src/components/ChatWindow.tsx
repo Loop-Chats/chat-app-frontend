@@ -1,20 +1,28 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
+import { formatMessageTimestamp } from "../lib/utils";
 
 export default function ChatWindow() {
   const { messages, selectedChat, isMessagesLoading, getMessages } =
     useChatStore();
   const { authUser } = useAuthStore();
+  const messageEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedChat?._id) {
       getMessages(selectedChat._id);
     }
   }, [selectedChat?._id, getMessages]);
+
+  useEffect(() => {
+    if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   if (isMessagesLoading)
     return (
@@ -34,6 +42,13 @@ export default function ChatWindow() {
         {messages.map((message) => {
           const isMyMessage = message.senderId === authUser?._id;
 
+          const sender = isMyMessage
+            ? authUser
+            : selectedChat?.users?.find((u) => u._id === message.senderId);
+
+          const displayName = sender?.username || "Unknown Operator";
+          const avatarSrc = sender?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${displayName}`;
+
           return (
             <div
               key={message._id}
@@ -42,30 +57,18 @@ export default function ChatWindow() {
               {/* User Avatar */}
               <div className="chat-image avatar">
                 <div className="w-9 h-9 rounded-xl border border-base-100 bg-base-800 overflow-hidden shadow-md">
-                  <img
-                    src={
-                      isMyMessage
-                        ? authUser?.avatar
-                        : selectedChat?.chatImage ||
-                          "https://api.dicebear.com/7.x/bottts/svg?seed=" +
-                            selectedChat?.chatName
-                    }
-                    alt="profile pic"
-                  />
+                  <img src={avatarSrc} alt="profile pic" />
                 </div>
               </div>
 
               {/* Message Header (Username & Time Metadata) */}
               <div className="chat-header mb-1 flex items-center gap-1.5 font-mono text-[11px]">
                 <span className="font-bold text-base-content/80">
-                  {isMyMessage ? "You" : selectedChat?.chatName}
+                  {isMyMessage ? "You" : sender?.username}
                 </span>
                 <time className="text-[10px] opacity-40">
                   {message.createdAt
-                    ? new Date(message.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                    ? formatMessageTimestamp(message.createdAt)
                     : ""}
                 </time>
               </div>
@@ -79,7 +82,6 @@ export default function ChatWindow() {
                     : "bg-base-900 text-base-content border-base-100/50"
                 }`}
               >
-                {/* 1. Embedded Image Asset (Stacks safely on top) */}
                 {message.image && (
                   <div className="relative rounded-lg overflow-hidden border border-black/10 max-w-full sm:max-w-xs">
                     <img
@@ -90,7 +92,6 @@ export default function ChatWindow() {
                   </div>
                 )}
 
-                {/* 2. Text Message payload (Wraps naturally underneath) */}
                 {message.text && (
                   <p className="leading-relaxed break-words whitespace-pre-wrap text-left">
                     {message.text}
@@ -100,6 +101,7 @@ export default function ChatWindow() {
             </div>
           );
         })}
+        <div ref={messageEndRef} />
       </div>
 
       <MessageInput />

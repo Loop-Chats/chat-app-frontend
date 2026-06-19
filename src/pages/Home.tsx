@@ -2,9 +2,10 @@ import { useChatStore } from "../store/useChatStore";
 import ChatWindow from "../components/ChatWindow";
 import NoChatSelected from "../components/NoChatSelected";
 import Sidebar from "../components/Sidebar";
+import FriendsWindow from "../components/FriendsWindow";
 
 export default function Home() {
-  const { selectedChat } = useChatStore();
+  const { selectedChat, showFriendsView } = useChatStore();
 
   return (
     // min-h-screen layout matching your background profile specs
@@ -19,7 +20,13 @@ export default function Home() {
 
           {/* Right Side Main Interaction Display Grid */}
           <div className="flex-1 flex flex-col h-full bg-base-950/20">
-            {!selectedChat ? <NoChatSelected /> : <ChatWindow />}
+            {showFriendsView ? (
+              <FriendsWindow />
+            ) : !selectedChat ? (
+              <NoChatSelected />
+            ) : (
+              <ChatWindow />
+            )}
           </div>
         </div>
       </div>

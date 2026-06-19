@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
+import { useChatStore } from './useChatStore';
 
 interface User {
   _id: string;
@@ -93,6 +94,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       await axiosInstance.post('/auth/logout');
       set({ authUser: null });
+      useChatStore.setState({ selectedChat: null, messages: [] });
       toast.success('Logged out successfully!');
     } catch (error) {
        if (isAxiosError(error)) {

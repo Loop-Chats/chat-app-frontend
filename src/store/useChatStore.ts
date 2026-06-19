@@ -3,7 +3,6 @@ import { axiosInstance } from "../lib/axios";
 import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
 
-// Mirror of backend User model (Mongoose)
 export interface User {
   _id: string;
   email: string;
@@ -16,7 +15,7 @@ export interface User {
 
 export interface Message {
   _id: string;
-  senderId: string | User;
+  senderId: string;
   text?: string;
   image?: string;
   chat?: string; // chat id
@@ -30,7 +29,7 @@ export interface Chat {
   chatName?: string;
   chatImage?: string;
   isGroupChat?: boolean;
-  users: (string | User)[];
+  users: User[];
   latestMessage?: string | Message;
   groupAdmin?: string | User;
   createdAt?: string;
@@ -40,17 +39,17 @@ export interface Chat {
 interface ChatState {
   messages: Message[];
   chats: Chat[];
-  friends: User[];
   selectedChat: Chat | null;
   isChatsLoading: boolean;
-  isFriendsLoading: boolean;
   isMessagesLoading: boolean;
+  showFriendsView: boolean;
 
-    getFriends: () => Promise<void>;
     getChats: () => Promise<void>;
     getMessages: (chatId: string) => Promise<void>;
     setSelectedChat: (chat: Chat | null) => void;
     sendMessage: (messageData: { chatId?: string, text?: string, image?: string }) => Promise<void>;
+    setShowFriendsView: (show: boolean) => void;
+    createChat: (data: { otherUserIds: string[], chatName?: string; chatImage?: string; }) => Promise<Chat | undefined>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -59,26 +58,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   friends: [],
   selectedChat: null,
   isChatsLoading: false,
-  isFriendsLoading: false,
   isMessagesLoading: false,
-
-  getFriends: async () => {
-    set({ isFriendsLoading: true });
-
-    try {
-        const response = await axiosInstance.get("/api/friends");
-        set({ friends: response.data });
-    } catch (error) {
-        if (isAxiosError(error)) {
-            const message = error.response?.data?.message || 'Failed to fetch friends. Please try again.';
-            toast.error(message);
-        } else {
-            toast.error('An unexpected error occurred.');
-        }
-    } finally {
-      set({ isFriendsLoading: false });
-    }
-  },
+  showFriendsView: false,
 
   getChats: async () => {
     set({ isChatsLoading: true });
@@ -138,5 +119,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  createChat: async (data: { otherUserIds: string[], chatName?: string; chatImage?: string; }) => {
+    try {
+      const response = await axiosInstance.post('/chats', data);
+      set((state) => ({ chats: [...state.chats, response.data] }));
+      toast.success('Chat created successfully!');
+      return response.data as Chat;
+    } catch (error) {
+      if (isAxiosError(error)) {
+            const message = error.response?.data?.message || 'Failed to create chat. Please try again.';
+            toast.error(message);
+        } else {
+            toast.error('An unexpected error occurred.');
+        }
+    }
+  },
+
   setSelectedChat: (chat: Chat | null) => set({ selectedChat: chat }),
+
+  setShowFriendsView: (show: boolean) => set({ showFriendsView: show }),
 }));

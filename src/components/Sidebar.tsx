@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Search, ShieldAlert, Radio } from "lucide-react";
+import { Search, ShieldAlert, Radio, Users } from "lucide-react";
 import SidebarSkeleton from "./skeletons/SidebarSkeletons";
 
 export default function Sidebar() {
-  // Swapped out 'friends' variable abstractions for 'chats'
-  const { chats, selectedChat, setSelectedChat, isChatsLoading, getChats } =
+  const { chats, selectedChat, setSelectedChat, isChatsLoading, getChats, setShowFriendsView, showFriendsView } =
     useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,12 +40,38 @@ export default function Sidebar() {
 
       {/* Communications list mapping */}
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        <div className="flex items-center justify-between px-2">
+        <div className="space-y-1 border-b border-base-100/30 pb-3">
+          <button
+            onClick={() => {
+              const nextShowFriendsView = !showFriendsView;
+              setShowFriendsView(nextShowFriendsView);
+              if (nextShowFriendsView) {
+                setSelectedChat(null);
+              }
+            }}
+            className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all font-mono text-left group
+              ${
+                showFriendsView
+                  ? "bg-primary text-white shadow-md"
+                  : "hover:bg-base-800/40 text-base-content/70 hover:text-base-content"
+              }`}
+          >
+            <div
+              className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors
+              ${showFriendsView ? "bg-white/20 text-white" : "bg-base-800 text-base-content/70 group-hover:text-base-content"}`}
+            >
+              <Users className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold tracking-wide">Friends</span>
+          </button>
+        </div>
+        {/* === DYNAMIC CHATS === */}
+        <div className="flex items-center justify-between px-2 pt-1">
           <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-base-content/40 block">
-            Direct Messages
+            Chats
           </span>
           <span className="badge badge-primary badge-xs font-mono text-[9px] px-1.5 py-1">
-            {filteredChats.length} NODE(S)
+            {filteredChats.length} NODE{filteredChats.length === 1 ? "" : "S"}
           </span>
         </div>
 
@@ -66,7 +91,10 @@ export default function Sidebar() {
               return (
                 <button
                   key={chat._id}
-                  onClick={() => setSelectedChat(chat)}
+                  onClick={() => {
+                    setSelectedChat(chat);
+                    setShowFriendsView(false);
+                  }}
                   className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all border font-mono text-left group
                     ${
                       isSelected
