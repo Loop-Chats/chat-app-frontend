@@ -43,6 +43,11 @@ export const useFriendStore = create<FriendState>((set, get) => ({
   isSendingFriendRequest: false,
 
   getFriends: async () => {
+    const currentFriends = get().friends;
+    if (currentFriends.length > 0) {
+      return;
+    }
+
     set({ isFriendsLoading: true });
 
     try {

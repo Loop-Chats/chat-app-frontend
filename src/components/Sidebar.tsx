@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Search, ShieldAlert, Radio, Users } from "lucide-react";
+import { Search, ShieldAlert, Radio, Users, Plus } from "lucide-react";
 import SidebarSkeleton from "./skeletons/SidebarSkeletons";
+import CreateGroupModal from "./CreateGroupModal";
 
 export default function Sidebar() {
-  const { chats, selectedChat, setSelectedChat, isChatsLoading, getChats, setShowFriendsView, showFriendsView } =
-    useChatStore();
+  const {
+    chats,
+    selectedChat,
+    setSelectedChat,
+    isChatsLoading,
+    getChats,
+    setShowFriendsView,
+    showFriendsView,
+  } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -23,7 +31,8 @@ export default function Sidebar() {
   );
 
   return (
-    <div className="w-72 h-full flex flex-col bg-base-900/40 border-r border-base-100">
+    <>
+      <div className="w-72 h-full flex flex-col bg-base-900/40 border-r border-base-100">
       {/* Search system */}
       <div className="p-4 border-b border-base-100/30 flex items-center h-16">
         <div className="relative w-full">
@@ -66,13 +75,26 @@ export default function Sidebar() {
           </button>
         </div>
         {/* === DYNAMIC CHATS === */}
-        <div className="flex items-center justify-between px-2 pt-1">
+        <div className="flex items-center justify-between px-2 pt-1 group/header">
           <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-base-content/40 block">
             Chats
           </span>
-          <span className="badge badge-primary badge-xs font-mono text-[9px] px-1.5 py-1">
-            {filteredChats.length} NODE{filteredChats.length === 1 ? "" : "S"}
-          </span>
+          <div className="flex items-center gap-2">
+
+            {/* Create Group Button */}
+            <button
+              onClick={() => {
+                const modal = document.getElementById(
+                  "create_group_modal",
+                ) as HTMLDialogElement;
+                if (modal) modal.showModal();
+              }}
+              className="w-5 h-5 rounded-md bg-base-800/50 flex items-center justify-center text-base-content/50 hover:bg-success hover:text-white transition-all tooltip tooltip-top"
+              data-tip="Create Group"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {filteredChats.length === 0 ? (
@@ -165,6 +187,8 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      <CreateGroupModal />
+    </>
   );
 }
