@@ -76,6 +76,12 @@ interface ChatState {
     chatId: string;
     removeUserId: string;
   }) => Promise<Chat | undefined>;
+  makeChatAdmin: (data: {
+    userId: string;
+    chatId: string;
+    selectedUserId: string;
+  }) => Promise<Chat | undefined>;
+  isAdmin: (chatId: string) => boolean;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -291,6 +297,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const message =
           error.response?.data?.message ||
           "Failed to remove the user from the chat. Please try again.";
+        toast.error(message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    } finally {
+      set({ isUpdatingGroupMembers: false });
+    }
+  },
+
+  makeChatAdmin: async (data: {
+    userId: string;
+    chatId: string;
+    selectedUserId: string;
+  }) => {
+    set({ isUpdatingGroupMembers: true });
+
+    try {
+      const response = await axiosInstance.patch(
+        `/chats/${data.chatId}/make-admin`,
+        data,
+      );
+      const updatedChat = response.data;      
+
+      set((state) => ({
+        chats: state.chats.map((chat) =>
+          chat._id === data.chatId ? updatedChat : chat,
+        ),
+
+        selectedChat:
+          state.selectedChat?._id === data.chatId
+            ? updatedChat
+            : state.selectedChat,
+      }));
+      toast.success("User promoted to admin successfully!");
+    } catch (error) {
+      if (isAxiosError(error)) {
+        const message =
+          error.response?.data?.message ||
+          "Failed to promote the user to admin. Please try again.";
         toast.error(message);
       } else {
         toast.error("An unexpected error occurred.");

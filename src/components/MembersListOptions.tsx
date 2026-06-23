@@ -4,7 +4,7 @@ import { ShieldAlert, Shield, UserMinus } from "lucide-react";
 
 const MembersListOptions = () => {
   const { authUser } = useAuthStore();
-  const { selectedChat, removeUserFromTheGroupChat, isUpdatingGroupMembers } =
+  const { selectedChat, removeUserFromTheGroupChat, isUpdatingGroupMembers, makeChatAdmin } =
     useChatStore();
 
   if (!selectedChat || !selectedChat.users || !authUser?._id) return null;
@@ -81,10 +81,11 @@ const MembersListOptions = () => {
                       <button
                         disabled={isUpdatingGroupMembers}
                         onClick={() =>
-                          console.log(
-                            "TODO: Implement makeAdmin function for",
-                            member._id,
-                          )
+                          makeChatAdmin({
+                            userId: viewerId,
+                            chatId: selectedChat._id,
+                            selectedUserId: member._id,
+                          })
                         }
                         className="btn btn-square btn-sm bg-warning/10 text-warning hover:bg-warning hover:text-warning-content border-transparent transition-colors"
                       >

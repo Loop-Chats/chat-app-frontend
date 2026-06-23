@@ -1,15 +1,17 @@
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
-import { X, ShieldAlert, Radio, Settings } from "lucide-react";
+import { X, ShieldAlert, Radio, Settings, UserPlus } from "lucide-react";
 import EditGroupModal from "./EditGroupModal";
+import AddUsersToGroupModal from "./AddUsersToGroupModal";
 
 export default function ChatHeader() {
   const { selectedChat, setSelectedChat } = useChatStore();
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, authUser } = useAuthStore();
 
   if (!selectedChat) return null;
 
   const isOnline = onlineUsers?.includes(selectedChat._id);
+  const isAdmin = selectedChat.groupAdmin === authUser?._id;
 
   return (
     <>
@@ -60,6 +62,21 @@ export default function ChatHeader() {
 
         {/* RIGHT SIDE: UTILITY ACTIONS */}
         <div className="flex items-center gap-2">
+          {selectedChat.isGroupChat && isAdmin && (
+            <div className="tooltip tooltip-bottom" data-tip="Recruit Operator">
+              <button
+                onClick={() => {
+                  const modal = document.getElementById(
+                    "add_users_modal",
+                  ) as HTMLDialogElement;
+                  if (modal) modal.showModal();
+                }}
+                className="btn btn-ghost btn-sm btn-square hover:bg-primary/20 text-base-content/40 hover:text-primary transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           {/* EDIT GROUP BUTTON - Wrapped in tooltip div */}
           {selectedChat.isGroupChat && (
             <div className="tooltip tooltip-bottom" data-tip="Node Settings">
@@ -76,18 +93,9 @@ export default function ChatHeader() {
               </button>
             </div>
           )}
-
-          {/* DISCONNECT BUTTON */}
-          <div className="tooltip tooltip-left" data-tip="Disconnect">
-            <button
-              onClick={() => setSelectedChat(null)}
-              className="btn btn-ghost btn-sm btn-square hover:bg-error/10 hover:text-error text-base-content/40 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
+      <AddUsersToGroupModal />
       <EditGroupModal />
     </>
   );
