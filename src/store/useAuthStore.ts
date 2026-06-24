@@ -3,6 +3,7 @@ import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
 import { useChatStore } from './useChatStore';
+import { io, Socket } from 'socket.io-client';
 
 interface User {
   _id: string;
@@ -24,19 +25,23 @@ interface AuthState {
   isUpdatingProfile: boolean;
   isCheckingAuth: boolean;
   onlineUsers: string[];
+  socket: Socket | null;
   checkAuth: () => Promise<void>;
   register: (data: { username: string; email: string; password: string }) => Promise<void>;
   login: (data: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
+  connectToSocket: () => void;
+  disconnectFromSocket: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   authUser: null,
   isRegistering: false,
   isLoggingIn: false,
   isUpdatingProfile: false,
   isCheckingAuth: true,
+  socket: null,
   onlineUsers: [],
 
   checkAuth: async () => {
@@ -44,6 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await axiosInstance.get('/auth/check-auth');
 
       set({ authUser: response.data });
+      get().connectToSocket();
     } catch (error) {
       console.error('Error checking auth:', error);
       set({ authUser: null });
@@ -59,6 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       set({ authUser: response.data });
       toast.success('Account created successfully!');
+      get().connectToSocket();
     } catch (error) {
       if (isAxiosError(error)) {
             const message = error.response?.data?.message || 'Registration failed. Please try again.';
@@ -78,6 +85,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       set({ authUser: response.data });
       toast.success('Logged in successfully!');
+      get().connectToSocket();
     } catch (error) {
       if (isAxiosError(error)) {
             const message = error.response?.data?.message || 'Login failed. Please try again.';
@@ -96,6 +104,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ authUser: null });
       useChatStore.setState({ selectedChat: null, messages: [] });
       toast.success('Logged out successfully!');
+      get().disconnectFromSocket();
     } catch (error) {
        if (isAxiosError(error)) {
             const message = error.response?.data?.message || 'Failed to log out. Please try again.';
@@ -123,5 +132,30 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       set({ isUpdatingProfile: false });
     }
-  }
+  },
+
+  connectToSocket: async () => {
+    const { authUser } = get();
+
+    if (!authUser || get().socket?.connected) return;
+
+    const socket = io(import.meta.env.VITE_SOCKET_URL, {
+      query: {
+        userId: authUser._id,
+      },
+    });
+    socket.connect();
+
+    set({ socket: socket });
+    socket.on('connect', () => {
+      useChatStore.getState().subscribeToMessages();
+    });
+    socket.on('getOnlineUsers', (onlineUsers: string[]) => {
+      set({ onlineUsers: onlineUsers });
+    });
+  },
+
+  disconnectFromSocket: () => {
+    if (get().socket?.connected) get().socket.disconnect();
+  },
 }));

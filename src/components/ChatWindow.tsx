@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTimestamp } from "../lib/utils";
 
 export default function ChatWindow() {
-  const { messages, selectedChat, isMessagesLoading, getMessages } =
+  const { messages, selectedChat, isMessagesLoading, getMessages, subscribeToMessages, unsubscribeFromMessages } =
     useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef<HTMLDivElement>(null);
@@ -15,11 +15,13 @@ export default function ChatWindow() {
   useEffect(() => {
     if (selectedChat?._id) {
       getMessages(selectedChat._id);
+      subscribeToMessages();
+      return () => unsubscribeFromMessages();
     }
-  }, [selectedChat?._id, getMessages]);
+  }, [selectedChat?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
-    if (messageEndRef.current) {
+    if (messageEndRef.current && messages) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);

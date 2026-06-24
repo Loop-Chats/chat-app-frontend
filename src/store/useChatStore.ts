@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
+import { useAuthStore } from "./useAuthStore";
 
 export interface User {
   _id: string;
@@ -30,7 +31,7 @@ export interface Chat {
   chatImage?: string;
   isGroupChat?: boolean;
   users: User[];
-  latestMessage?: string | Message;
+  latestMessage?: Message;
   groupAdmin?: string | User;
   createdAt?: string;
   updatedAt?: string;
@@ -40,6 +41,7 @@ interface ChatState {
   messages: Message[];
   chats: Chat[];
   selectedChat: Chat | null;
+  latestMessage: Message | null;
   isChatsLoading: boolean;
   isMessagesLoading: boolean;
   isCreatingChat: boolean;
@@ -55,6 +57,11 @@ interface ChatState {
     text?: string;
     image?: string;
   }) => Promise<void>;
+  markMessageAsRead: (messageId: string, chatId: string) => Promise<void>;
+  subscribeToMessages: () => void;
+  unsubscribeFromMessages: () => void;
+  subscribeToGlobalChatEvents: () => void;
+  unsubscribeFromGlobalChatEvents: () => void;
   setShowFriendsView: (show: boolean) => void;
   createChat: (data: {
     otherUserIds: string[];
@@ -154,7 +161,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         `/messages/chats/${chatId}`,
         messageData,
       );
-      set({ messages: [...messages, response.data] });
+      const newMessage = response.data;
+      set((state) => {
+        const isDuplicate = state.messages.some((m) => m._id === newMessage._id);
+
+        return {
+          messages: isDuplicate ? state.messages : [...state.messages, newMessage],
+          chats: state.chats.map((chat) =>
+            chat._id === chatId ? { ...chat, latestMessage: newMessage } : chat,
+          ),
+        };
+      });
     } catch (error) {
       if (isAxiosError(error)) {
         const message =
@@ -165,6 +182,84 @@ export const useChatStore = create<ChatState>((set, get) => ({
         toast.error("An unexpected error occurred.");
       }
     }
+  },
+
+  markMessageAsRead: async (messageId: string, chatId: string) => {
+    try {
+      await axiosInstance.patch(`messages/mark-message/${messageId}`);
+
+      const authUser = useAuthStore.getState().authUser;
+
+      set((state) => ({
+        chats: state.chats.map((chat) => {
+          if (chat._id === chatId && chat.latestMessage) {
+             const msg = chat.latestMessage as Message;
+             return {
+               ...chat,
+               latestMessage: {
+                 ...msg,
+                 readBy: [...(msg.readBy || []), authUser?._id || ""]
+               }
+             };
+          }
+          return chat;
+        }),
+      }));
+    } catch (error) {
+      console.log("Error marking message as read:", error);
+    }
+  },
+
+  subscribeToMessages: () => {
+    const { selectedChat } = get();
+
+    if (!selectedChat) return;
+
+    const socket = useAuthStore.getState().socket;
+
+    socket.emit("joinChat", selectedChat._id);
+
+    socket.off("newMessage");
+
+    socket.on("newMessage", (message: Message) => {
+      if (message.chat !== get().selectedChat?._id) return;
+
+      const isDuplicate = get().messages.some((m) => m._id === message._id);
+      if (isDuplicate) return;
+
+      set((state) => ({ messages: [...state.messages, message] }));
+
+      const authUser = useAuthStore.getState().authUser;
+      if (message.senderId !== authUser?._id) {
+        get().markMessageAsRead(message._id, String(message.chat));
+      }
+    });
+  },
+
+  unsubscribeFromMessages: () => {
+    const socket = useAuthStore.getState().socket;
+
+    socket.off("newMessage");
+  },
+
+  subscribeToGlobalChatEvents: () => {
+    const socket = useAuthStore.getState().socket;
+
+    socket.off("chatUpdated");
+
+    socket.on("chatUpdated", ({ chatId, latestMessage }) => {
+      set((state) => ({
+        chats: state.chats.map((chat) =>
+          chat._id === chatId ? { ...chat, latestMessage } : chat,
+        ),
+      }));
+    });
+  },
+
+  unsubscribeFromGlobalChatEvents: () => {
+    const socket = useAuthStore.getState().socket;
+
+    socket.off("chatUpdated");
   },
 
   createChat: async (data: {
@@ -318,7 +413,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         `/chats/${data.chatId}/make-admin`,
         data,
       );
-      const updatedChat = response.data;      
+      const updatedChat = response.data;
 
       set((state) => ({
         chats: state.chats.map((chat) =>

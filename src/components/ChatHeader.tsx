@@ -1,16 +1,19 @@
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
-import { X, ShieldAlert, Radio, Settings, UserPlus } from "lucide-react";
+import { ShieldAlert, Radio, Settings, UserPlus } from "lucide-react";
 import EditGroupModal from "./EditGroupModal";
 import AddUsersToGroupModal from "./AddUsersToGroupModal";
+import { checkIsOnline } from "../lib/utils";
 
 export default function ChatHeader() {
-  const { selectedChat, setSelectedChat } = useChatStore();
+  const { selectedChat } = useChatStore();
   const { onlineUsers, authUser } = useAuthStore();
 
   if (!selectedChat) return null;
 
-  const isOnline = onlineUsers?.includes(selectedChat._id);
+  const isDirectChat = !selectedChat.isGroupChat;
+  const isOnline =
+    isDirectChat && checkIsOnline(selectedChat, authUser?._id, onlineUsers);
   const isAdmin = selectedChat.groupAdmin === authUser?._id;
 
   return (
@@ -30,33 +33,37 @@ export default function ChatHeader() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <span
-              className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-base-900
+            {isDirectChat && (
+              <span
+                className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-base-900
             ${isOnline ? "bg-success shadow-[0_0_8px_rgba(46,213,115,0.4)]" : "bg-base-600"}`}
-            />
+              />
+            )}
           </div>
 
           <div className="font-mono text-left">
             <h3 className="text-xs font-bold text-base-content tracking-wide">
               {selectedChat.chatName}
             </h3>
-            <div className="flex items-center gap-1 mt-0.5">
-              {isOnline ? (
-                <>
-                  <Radio className="w-2.5 h-2.5 text-success animate-pulse" />
-                  <span className="text-[9px] text-success uppercase tracking-wider font-bold">
-                    Online
-                  </span>
-                </>
-              ) : (
-                <>
-                  <ShieldAlert className="w-2.5 h-2.5 text-base-content/30" />
-                  <span className="text-[9px] text-base-content/40 uppercase tracking-wider">
-                    Offline
-                  </span>
-                </>
-              )}
-            </div>
+            {isDirectChat && (
+              <div className="flex items-center gap-1 mt-0.5">
+                {isOnline ? (
+                  <>
+                    <Radio className="w-2.5 h-2.5 text-success animate-pulse" />
+                    <span className="text-[9px] text-success uppercase tracking-wider font-bold">
+                      Online
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="w-2.5 h-2.5 text-base-content/30" />
+                    <span className="text-[9px] text-base-content/40 uppercase tracking-wider">
+                      Offline
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
